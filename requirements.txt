@@ -6,7 +6,7 @@
 numpy==2.2.0
 
 # Image creation, saving, and pixel manipulation
-Pillow==11.0.0
+Pillow==12.2.0
 
 # Visualization engine used for chaotic lines, shapes, gradients
 matplotlib==3.10.0

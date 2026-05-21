@@ -1,0 +1,307 @@
+python
+#!/usr/bin/env python3
+"""
+visual_pqc_art.py
+
+Generates colorful, chaotic images in two modes:
+
+- DEMO mode:
+  * For visual experimentation only.
+  * Not to be used for any real cryptographic / decryption purpose.
+  * Images are tagged as DEMO_ONLY.
+
+- SOLDIER mode:
+  * Generates higher-definition, more complex images.
+  * Provides clearly separated HOOKS where robust PQC key generation
+    (aligned with NIST / NSA guidance) could be integrated using
+    vetted libraries and expert review.
+  * This script itself is NOT a production cryptographic system and
+    MUST NOT be used where human lives are at stake.
+
+Dependencies:
+    pip install numpy matplotlib pillow opencv-python
+"""
+
+import os
+import uuid
+import json
+import argparse
+import random
+from datetime import datetime
+
+import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import cv2  # optional but widely used
+
+
+# -------------------------------------------------------------------
+# Registry for "one-time" usage tracking (best-effort, not enforcement)
+# -------------------------------------------------------------------
+
+REGISTRY_FILE = "image_usage_registry.json"
+
+
+def load_registry():
+    if not os.path.exists(REGISTRY_FILE):
+        return {}
+    try:
+        with open(REGISTRY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_registry(registry):
+    with open(REGISTRY_FILE, "w", encoding="utf-8") as f:
+        json.dump(registry, f, indent=2)
+
+
+def register_image(path, mode):
+    registry = load_registry()
+    registry[path] = {
+        "mode": mode,
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "used_for_crypto": False  # you must update this in your own workflow
+    }
+    save_registry(registry)
+
+
+# -------------------------------------------------------------------
+# Chaotic visual generator
+# -------------------------------------------------------------------
+
+def generate_chaotic_canvas(width, height, seed=None, complexity=1.0):
+    """
+    Create a chaotic RGB image using matplotlib and numpy.
+    complexity in [0.5, 3.0+] roughly controls how busy the image is.
+    """
+    rng = np.random.default_rng(seed)
+
+    dpi = 100
+    fig_w = width / dpi
+    fig_h = height / dpi
+
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=dpi)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    # Background gradient
+    bg_x = np.linspace(0, 1, 512)
+    bg_y = np.linspace(0, 1, 512)
+    bg_xv, bg_yv = np.meshgrid(bg_x, bg_y)
+    bg = np.sin(2 * np.pi * (bg_xv * complexity + bg_yv * complexity * 0.7))
+    bg = (bg - bg.min()) / (bg.max() - bg.min() + 1e-9)
+    ax.imshow(bg, extent=[0, 1, 0, 1], origin="lower", cmap=rng.choice(
+        ["viridis", "plasma", "magma", "inferno", "turbo", "twilight", "hsv"]
+    ), alpha=0.9)
+
+    # Chaotic lines
+    n_lines = int(50 * complexity)
+    for _ in range(n_lines):
+        x0, y0 = rng.random(), rng.random()
+        x1, y1 = rng.random(), rng.random()
+        lw = 0.5 + rng.random() * 3 * complexity
+        color = rng.random(3)
+        ax.plot([x0, x1], [y0, y1], color=color, linewidth=lw, alpha=0.6)
+
+    # Random curves / squiggles
+    n_curves = int(20 * complexity)
+    for _ in range(n_curves):
+        pts = rng.random((rng.integers(3, 10), 2))
+        pts = pts[np.argsort(pts[:, 0])]
+        color = rng.random(3)
+        lw = 0.5 + rng.random() * 2 * complexity
+        ax.plot(pts[:, 0], pts[:, 1], color=color, linewidth=lw, alpha=0.7)
+
+    # Random shapes
+    n_shapes = int(30 * complexity)
+    for _ in range(n_shapes):
+        x, y = rng.random(), rng.random()
+        w, h = rng.random() * 0.3, rng.random() * 0.3
+        angle = rng.random() * 360
+        color = rng.random(3)
+        alpha = 0.2 + rng.random() * 0.6
+        if rng.random() < 0.5:
+            patch = patches.Ellipse((x, y), w, h, angle=angle, color=color, alpha=alpha)
+        else:
+            patch = patches.Rectangle((x, y), w, h, angle=angle, color=color, alpha=alpha)
+        ax.add_patch(patch)
+
+    fig.canvas.draw()
+    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    img = img.reshape((int(fig_h * dpi), int(fig_w * dpi), 3))
+    plt.close(fig)
+
+    # Optional OpenCV warp for extra chaos
+    if complexity > 1.2:
+        h, w, _ = img.shape
+        src = np.float32([[0, 0], [w - 1, 0], [0, h - 1]])
+        dst = np.float32([
+            [rng.random() * w * 0.2, rng.random() * h * 0.2],
+            [w - 1 - rng.random() * w * 0.2, rng.random() * h * 0.2],
+            [rng.random() * w * 0.2, h - 1 - rng.random() * h * 0.2],
+        ])
+        M = cv2.getAffineTransform(src, dst)
+        img = cv2.warpAffine(img, M, (w, h), borderMode=cv2.BORDER_REFLECT)
+
+    return Image.fromarray(img)
+
+
+# -------------------------------------------------------------------
+# PQC HOOKS (placeholders, NOT real crypto)
+# -------------------------------------------------------------------
+
+def derive_pqc_seed_from_image(image: Image.Image, mode: str) -> bytes:
+    """
+    Placeholder: derive a seed from image bytes.
+
+    In a real system, this must be combined with:
+      - Hardware RNG / OS CSPRNG
+      - Approved extractors (e.g., HKDF with approved hash/XOF)
+      - Conservative entropy estimation
+      - NIST / NSA guidance and expert review
+
+    This function intentionally returns a dummy value and MUST be replaced.
+    """
+    # WARNING: This is NOT secure. It is a stub.
+    data = image.tobytes()
+    import hashlib
+    h = hashlib.blake2b(data, digest_size=32)
+    seed = h.digest()
+    # In real use, you would mix this with hardware RNG, etc.
+    return seed
+
+
+def generate_pqc_keys_from_seed(seed: bytes):
+    """
+    Placeholder: integrate with a vetted PQC library here.
+
+    You should:
+      - Use NIST-selected PQC algorithms (e.g., Kyber, Dilithium, etc.)
+      - Follow official documentation and security parameters
+      - Have the implementation reviewed by qualified cryptographers
+      - NOT rely on this script as a life-critical component
+
+    This function currently just raises NotImplementedError.
+    """
+    raise NotImplementedError(
+        "PQC key generation is not implemented here. "
+        "Integrate a vetted PQC library and follow NIST/NSA guidance."
+    )
+
+
+# -------------------------------------------------------------------
+# Mode handlers
+# -------------------------------------------------------------------
+
+def run_demo_mode(args):
+    """
+    DEMO MODE:
+      - Visual experimentation only.
+      - Not for cryptographic use.
+    """
+    os.makedirs(args.output_dir, exist_ok=True)
+    for i in range(args.count):
+        seed = random.getrandbits(64)
+        img = generate_chaotic_canvas(
+            width=args.width,
+            height=args.height,
+            seed=seed,
+            complexity=args.complexity
+        )
+        uid = uuid.uuid4().hex
+        fname = f"DEMO_ONLY_{uid}.png"
+        path = os.path.join(args.output_dir, fname)
+        img.save(path)
+        register_image(path, mode="DEMO")
+        print(f"[DEMO] Saved: {path}")
+
+
+def run_soldier_mode(args):
+    """
+    SOLDIER MODE:
+      - Generates higher-definition, more complex images.
+      - Provides hooks for PQC seed derivation and key generation.
+      - This script is NOT a complete or approved cryptographic system.
+    """
+    os.makedirs(args.output_dir, exist_ok=True)
+    for i in range(args.count):
+        seed = random.getrandbits(64)
+        img = generate_chaotic_canvas(
+            width=args.width,
+            height=args.height,
+            seed=seed,
+            complexity=max(args.complexity, 1.5)  # push complexity up
+        )
+        uid = uuid.uuid4().hex
+        fname = f"SOLDIER_{uid}.png"
+        path = os.path.join(args.output_dir, fname)
+        img.save(path)
+        register_image(path, mode="SOLDIER")
+        print(f"[SOLDIER] Saved image: {path}")
+
+        if args.pqc_demo:
+            # Demonstrate the flow ONLY (not real crypto)
+            pqc_seed = derive_pqc_seed_from_image(img, mode="SOLDIER")
+            print(f"  -> Derived dummy PQC seed (len={len(pqc_seed)} bytes).")
+            try:
+                generate_pqc_keys_from_seed(pqc_seed)
+            except NotImplementedError as e:
+                print(f"  -> PQC keygen hook: {e}")
+
+
+# -------------------------------------------------------------------
+# CLI
+# -------------------------------------------------------------------
+
+def parse_args():
+    p = argparse.ArgumentParser(
+        description="Generate chaotic colorful images in DEMO or SOLDIER mode."
+    )
+    p.add_argument(
+        "--mode",
+        choices=["demo", "soldier"],
+        required=True,
+        help="demo = visual only; soldier = high-def + PQC hooks (no real crypto)."
+    )
+    p.add_argument("--width", type=int, default=1920, help="Image width in pixels.")
+    p.add_argument("--height", type=int, default=1080, help="Image height in pixels.")
+    p.add_argument("--count", type=int, default=3, help="Number of images to generate.")
+    p.add_argument(
+        "--complexity",
+        type=float,
+        default=1.0,
+        help="Visual complexity factor (roughly 0.5–3.0+)."
+    )
+    p.add_argument(
+        "--output-dir",
+        type=str,
+        default="output_images",
+        help="Directory to save generated images."
+    )
+    p.add_argument(
+        "--pqc-demo",
+        action="store_true",
+        help="In soldier mode, run PQC seed derivation + keygen HOOK (still not real crypto)."
+    )
+    return p.parse_args()
+
+
+def main():
+    args = parse_args()
+    if args.mode == "demo":
+        print("Running in DEMO MODE (visual only, NOT for crypto).")
+        run_demo_mode(args)
+    elif args.mode == "soldier":
+        print("Running in SOLDIER MODE (high-def visuals + PQC HOOKS ONLY).")
+        print("This script is NOT a production cryptographic system.")
+        run_soldier_mode(args)
+    else:
+        raise ValueError("Unknown mode")
+
+
+if __name__ == "__main__":
+    main()d

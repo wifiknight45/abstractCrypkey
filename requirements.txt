@@ -1,0 +1,31 @@
+# ============================
+# Core Requirements for visual_pqc_art.py
+# ============================
+
+# Numerical computing backbone (arrays, math, randomness)
+numpy==2.2.0
+
+# Image creation, saving, and pixel manipulation
+Pillow==11.0.0
+
+# Visualization engine used for chaotic lines, shapes, gradients
+matplotlib==3.10.0
+
+# OpenCV for warping, affine transforms, distortions, and advanced image ops
+opencv-python==4.10.0.84
+
+# Optional but widely used noise functions (Perlin, simplex)
+noise==1.2.2
+
+# For JSON registry, UUID, and standard library features (no pip install needed)
+# json
+# uuid
+
+# ============================
+# Notes:
+# - These versions are the most recent stable releases as of 2026.
+# - All packages are widely used, well‑maintained, and compatible with Python 3.10–3.12.
+# - This file intentionally excludes any cryptographic libraries because
+#   SOLDIER MODE requires vetted, NIST‑approved PQC libraries, which must be
+#   integrated manually and reviewed by qualified cryptographers.
+# ============================
